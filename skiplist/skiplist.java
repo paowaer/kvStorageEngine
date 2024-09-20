@@ -41,6 +41,7 @@ public class SkipList<K extends Comparable<K>, V> {
     public SkipList() {
         this.header = new Node<>(null, null, MAX_LEVEL);
         this.nodeCount = 0;
+        
         this.skipListLevel = 0;
     }
     
@@ -54,7 +55,6 @@ public class SkipList<K extends Comparable<K>, V> {
     private Node<K, V> createNode(K key, V value, int level) {
         return new Node<>(key, value, level);
     }
-    
     
     private static int generateRandomLevel() {
         int level = 1;
@@ -84,7 +84,7 @@ public class SkipList<K extends Comparable<K>, V> {
         
         for (int i = this.skipListLevel; i >= 0; i--) {
             while (current.forwards.get(i) != null && current.forwards.get(i).getKey().compareTo(key) < 0) {
-                current = current.forwards.get(0);
+                current = current.forwards.get(i);
             }
             update.set(i, current);
         }
@@ -138,12 +138,41 @@ public class SkipList<K extends Comparable<K>, V> {
         
         return current != null && current.getKey().compareTo(key) == 0;
     }
+
+    public synchronized boolean deleteNode(K key) {
+        Node<K, V> current = this.header;
+        ArrayList<Node<K, V>> update = new ArrayList<>(Collections.nCopies(MAX_LEVEL + 1, null));
+        
+        for (int i = this.skipListLevel; i >= 0; i--) {
+            while (current.forwards.get(i) != null && current.forwards.get(i).getKey().compareTo(key) < 0) {
+                current = current.forwards.get(i);
+            }
+            update.set(i, current);
+        }
+        
+        current = current.forwards.get(0);
+        
+        if (current != null && current.getKey().compareTo(key) == 0) {
+            for (int i = 0; i < this.skipListLevel; i++) {
+                if (update.get(i).forwards.get(i) != current) break;
+                update.get(i).forwards.set(i, current.forwards.get(i));
+            }
+        }
+        
+        while (this.skipListLevel > 0 && this.header.forwards.get(this.skipListLevel) == null) {
+            this.skipListLevel--;
+        }
+        
+        this.nodeCount--;
+        return true;
+    }
     
     
     public static void main(String[] args) {
         SkipList<Integer, Integer> skiplist = new SkipList<>();
         Scanner scanner = new Scanner(System.in);
         int N = scanner.nextInt();
+        int K = scanner.nextInt();
         int M = scanner.nextInt();
 
         for (int i = 0; i < N; i++) {
@@ -154,6 +183,11 @@ public class SkipList<K extends Comparable<K>, V> {
             } else {
                 System.out.println("Insert Failed");
             }
+        }
+
+        for (int i = 0; i < K; i++) {
+            int key = scanner.nextInt();
+            skiplist.deleteNode(key);
         }
 
         for (int i = 0; i < M; i++) {
